@@ -6,12 +6,13 @@ namespace Deltin.Math
 {
     abstract class Expression
     {
-        public static implicit operator Expression(string formula) => new Parser(new Tokenizer(formula)).GetExpression();
-
         public abstract override string ToString();
 
         public abstract float Evaluate(EvaluateInfo evaluateInfo);
 
+        public static Expression FromString(string formula, params string[] parameters) => new Parser(new Tokenizer(formula), parameters).GetExpression();
+
+        /// <summary>A number, ex: '12'</summary>
         public class Number : Expression
         {
             public float Value { get; }
@@ -22,6 +23,7 @@ namespace Deltin.Math
             public override string ToString() => Value.ToString();
         }
 
+        /// <summary>A variable, ex: 'n'</summary>
         public class Variable : Expression
         {
             public string Name { get; }
@@ -33,12 +35,13 @@ namespace Deltin.Math
                 if (evaluateInfo.InputParameters.TryGetValue(Name, out float result))
                     return result;
 
-                throw new EvaluateException();
+                throw new Exception(Name + " is not a valid variable");
             }
 
             public override string ToString() => Name;
         }
 
+        /// <summary>A value encapsulated in parentheses, ex: '(a)'</summary>
         public class Group : Expression
         {
             public Expression Child { get; }
@@ -49,6 +52,7 @@ namespace Deltin.Math
             public override string ToString() => "(" + Child.ToString() + ")";
         }
 
+        /// <summary>A value negated, ex: '-a'</summary>
         public class Negate : Expression
         {
             public Expression Value { get; }
@@ -59,6 +63,7 @@ namespace Deltin.Math
             public override string ToString() => "-" + Value.ToString();
         }
 
+        /// <summary>An operation, ex: 'a + b'</summary>
         public class Operation : Expression
         {
             public TokenType TokenType { get; }
@@ -89,6 +94,7 @@ namespace Deltin.Math
             };
         }
 
+        /// <summary>A list of values to be multiplied together, ex: 'n5'</summary>
         public class MultiplyShorthand : Expression
         {
             public Expression[] Values { get; }

@@ -102,6 +102,7 @@ namespace Deltin
                 launcher.owner = body.gameObject;
                 launcher.crit = Util.CheckRoll(body.crit, body.master);
                 launcher.remaining = balance.GetFireworkCount(fireworkCount);
+                launcher.damageCoefficient = balance.GetFireworkDamageCoefficient(fireworkCount);
             }
 
             // Squid

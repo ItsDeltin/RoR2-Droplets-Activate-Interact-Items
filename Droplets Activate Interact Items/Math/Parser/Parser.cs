@@ -7,6 +7,10 @@ namespace Deltin.Math.Parse
     class Parser
     {
         readonly Token[] _tokens;
+        readonly string _input;
+        readonly string[] _parameters;
+
+
         readonly Stack<Expression> _operands = new Stack<Expression>();
         readonly Stack<Operator> _operators = new Stack<Operator>();
 
@@ -14,9 +18,11 @@ namespace Deltin.Math.Parse
         int _currentToken;
         
 
-        public Parser(Tokenizer tokenizer)
+        public Parser(Tokenizer tokenizer, string[] parameters)
         {
             _tokens = tokenizer.GetTokens();
+            _input = tokenizer.Input;
+            _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             _operators.Push(Operator.Operators[0]);
         }
 
@@ -67,31 +73,45 @@ namespace Deltin.Math.Parse
 
                 // Variable
                 case TokenType.Variable:
+                    if (!_parameters.Contains(token.Text))
+                        throw new SyntaxErrorException("The variable '" + token.Text + "' is not allowed in the expression '" + _input);
+
                     return new Expression.Variable(token.Text);
 
                 // Grouped
                 case TokenType.ParenthesesOpen:
                     var result = GetExpression();
-                    Expect(TokenType.ParenthesesClose);
-                    return result;
+                    Expect(TokenType.ParenthesesClose, ")");
+                    return new Expression.Group(result);
+                
+                // Missing token
+                case TokenType.EOF:
+                    throw new SyntaxErrorException("Missing value");
                 
                 // Token is not an expression
-                case TokenType.EOF:
                 default:
-                    throw new SyntaxErrorException();
+                    throw new SyntaxErrorException("'" + token.Text + "' is not a value");
             }
         }
 
         bool GetOperator()
         {
+            // Find matching operator.
             var token = Current();
             var op = Operator.Operators.FirstOrDefault(o => o.Type == token.TokenType);
-            if (op == null) return false;
+
+            // No matching operator.
+            if (op == null)
+                return false;
+            
+            // Consume the operator token.
             Consume();
 
+            // Pop operators with greater or equal precedence.
             while (_operators.Peek().Precedence >= op.Precedence)
                 PopOperator();
 
+            // Push our operator.
             _operators.Push(op);
             return true;
         }
@@ -108,10 +128,10 @@ namespace Deltin.Math.Parse
         Token Consume() => _tokens[_currentToken++];
         bool IsNode => new[] { TokenType.Number, TokenType.Variable, TokenType.ParenthesesOpen }.Contains(Current().TokenType);
 
-        void Expect(TokenType tokenType)
+        void Expect(TokenType tokenType, string text)
         {
             if (Consume().TokenType != tokenType)
-                throw new SyntaxErrorException();
+                throw new SyntaxErrorException("Expected '" + text + "'");
         }
 
         float ToFloat(string text)
@@ -122,7 +142,7 @@ namespace Deltin.Math.Parse
             }
             catch
             {
-                throw new SyntaxErrorException();
+                throw new SyntaxErrorException("'" + text + "' is not a number");
             }
         }
     }

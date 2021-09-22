@@ -29,8 +29,12 @@ namespace Deltin.Math.Parse
         public Token[] GetTokens()
         {
             var tokens = new List<Token>();
+
+            // Get tokens until we reach the EOF
             do tokens.Add(Next());
             while (tokens.Last().TokenType != TokenType.EOF);
+
+            // Done
             return tokens.ToArray();
         }
 
