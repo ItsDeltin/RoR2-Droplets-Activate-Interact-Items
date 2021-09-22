@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using BepInEx;
 using RoR2;
 using MonoMod.Cil;
@@ -12,26 +11,13 @@ namespace Deltin
     [BepInPlugin("com.deltin.dropletsactivateinteractitems", "Droplets Activate Interact Items", "1.0.0")]
     public class Droplets_Activate_Interact_Items : BaseUnityPlugin
     {
-        static readonly DropletBalance MONSTER_TOOTH = new DropletBalance() {
-            FireworkCountMultiplier = 1,
-            SquidAttackSpeedMultiplier = 2,
-            SquidHealthDecay = 10
-        };
-
-        static readonly DropletBalance BANDOLIER = new DropletBalance() {
-            FireworkCountMultiplier = 3,
-            SquidAttackSpeedMultiplier = 5,
-            SquidHealthDecay = 20
-        };
-
-        static readonly DropletBalance GHORS_TOME = new DropletBalance() {
-            FireworkCountMultiplier = 4,
-            SquidAttackSpeedMultiplier = 7,
-            SquidHealthDecay = 30
-        };
+        public static BepInEx.Logging.ManualLogSource Log { get; private set; }
 
         public void Awake()
         {
+            Log = Logger;
+            DropletConfig.Configure(Logger, Config);
+
             // Monster tooth
             IL.RoR2.HealthPickup.OnTriggerStay += il =>
             {
@@ -44,7 +30,7 @@ namespace Deltin
                 );
 
                 c.Emit(OpCodes.Ldloc_0); // Emit local variable that contains the character body.
-                c.EmitDelegate<Action<CharacterBody>>(characterBody => ExecuteDroplet(characterBody, MONSTER_TOOTH));
+                c.EmitDelegate<Action<CharacterBody>>(characterBody => ExecuteDroplet(characterBody, DropletConfig.MonsterTooth));
             };
 
             // Money
@@ -65,18 +51,40 @@ namespace Deltin
                 c.EmitDelegate<Action<Collider>>(collider => {
                     var body = collider.GetComponent<CharacterBody>();
                     if (body)
-                        ExecuteDroplet(body, GHORS_TOME);
+                        ExecuteDroplet(body, DropletConfig.GhorsTome);
                 });
             };
 
             // Ammo pickup
             On.RoR2.SkillLocator.ApplyAmmoPack += (orig, skillLocator) => {
                 orig(skillLocator);
-                ExecuteDroplet(skillLocator.GetComponent<CharacterBody>(), BANDOLIER);
+                ExecuteDroplet(skillLocator.GetComponent<CharacterBody>(), DropletConfig.Bandolier);
+            };
+
+            // Original firework count balancing on interaction.
+            IL.RoR2.GlobalEventManager.OnInteractionBegin += il =>
+            {
+                var c = new ILCursor(il);
+                // Find 4 + itemCount * 4
+                c.GotoNext(
+                    MoveType.Before,
+                    x => x.MatchLdcI4(4),
+                    x => x.MatchLdloc(5),
+                    x => x.MatchLdcI4(4),
+                    x => x.MatchMul(),
+                    x => x.MatchAdd()
+                );
+                c.RemoveRange(5);
+
+                // Add the firework item count variable.
+                c.Emit(OpCodes.Ldloc_S, (byte)5);
+
+                // Replace the firework count formula.
+                c.EmitDelegate<Func<int, int>>(fireworksCount => (int)DropletConfig.InteractFireworkCount.Evaluate(fireworksCount));
             };
         }
 
-        void ExecuteDroplet(CharacterBody body, DropletBalance balance)
+        void ExecuteDroplet(CharacterBody body, InteractableEventSourceConfig balance)
         {
             var inventory = body.inventory;
             if (!inventory) return;
@@ -93,7 +101,7 @@ namespace Deltin
 
                 launcher.owner = body.gameObject;
                 launcher.crit = Util.CheckRoll(body.crit, body.master);
-                launcher.remaining = balance.FireworkCountMultiplier + fireworkCount * balance.FireworkCountMultiplier;
+                launcher.remaining = balance.GetFireworkCount(fireworkCount);
             }
 
             // Squid
@@ -116,15 +124,14 @@ namespace Deltin
                     if (!result.success)
                         return;
                     var squidMaster = result.spawnedInstance.GetComponent<CharacterMaster>();
-                    squidMaster.inventory.GiveItem(RoR2Content.Items.HealthDecay, balance.SquidHealthDecay);
-                    squidMaster.inventory.GiveItem(RoR2Content.Items.BoostAttackSpeed, balance.SquidAttackSpeedMultiplier * (squidCount - 1));
+                    squidMaster.inventory.GiveItem(RoR2Content.Items.HealthDecay, balance.GetSquidHealth(squidCount));
+                    squidMaster.inventory.GiveItem(RoR2Content.Items.BoostAttackSpeed, balance.GetSquidAttackSpeed(squidCount));
                 };
                 DirectorCore.instance.TrySpawnObject(directorSpawnRequest);
             }
         }
 
         // Debugging
-        /*
         public void Update()
         {
             var itemHotkeys = new (KeyCode key, ItemDef item)[] {
@@ -144,13 +151,5 @@ namespace Deltin
                 PickupDropletController.CreatePickupDroplet(PickupCatalog.FindPickupIndex(itemHotkey.item.itemIndex), transform.position, transform.forward * 20f);
             }
         }
-        */
-    }
-
-    class DropletBalance
-    {
-        public int FireworkCountMultiplier { get; set; } = 4;
-        public int SquidHealthDecay { get; set; } = 30;
-        public int SquidAttackSpeedMultiplier { get; set; } = 10;
     }
 }

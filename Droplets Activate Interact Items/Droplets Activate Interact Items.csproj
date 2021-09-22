@@ -5,9 +5,9 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="libs\**"/>
-    <EmbeddedResource Remove="libs\**"/>
-    <None Remove="libs\**"/>
+    <Compile Remove="libs\**" />
+    <EmbeddedResource Remove="libs\**" />
+    <None Remove="libs\**" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
@@ -42,6 +42,6 @@
       <HintPath>libs\HGCSharpUtils.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <PackageReference Include="MonoMod.Utils" Version="21.8.19.1"/>
+    <PackageReference Include="MonoMod.Utils" Version="21.8.19.1" />
   </ItemGroup>
 </Project>
