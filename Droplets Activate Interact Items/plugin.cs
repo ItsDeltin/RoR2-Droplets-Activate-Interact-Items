@@ -12,11 +12,13 @@ namespace Deltin
     public class Droplets_Activate_Interact_Items : BaseUnityPlugin
     {
         public static BepInEx.Logging.ManualLogSource Log { get; private set; }
+        public static BepInEx.Configuration.ConfigFile Configuration { get; private set; }
 
         public void Awake()
         {
             Log = Logger;
-            DropletConfig.Configure(Logger, Config);
+            Configuration = Config;
+            DropletConfig.Configure();
 
             // Monster tooth
             IL.RoR2.HealthPickup.OnTriggerStay += il =>
@@ -133,6 +135,7 @@ namespace Deltin
         }
 
         // Debugging
+        /*
         public void Update()
         {
             var itemHotkeys = new (KeyCode key, ItemDef item)[] {
@@ -152,5 +155,6 @@ namespace Deltin
                 PickupDropletController.CreatePickupDroplet(PickupCatalog.FindPickupIndex(itemHotkey.item.itemIndex), transform.position, transform.forward * 20f);
             }
         }
+        */
     }
 }

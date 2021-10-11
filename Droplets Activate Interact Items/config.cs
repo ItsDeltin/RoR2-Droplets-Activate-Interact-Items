@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using BepInEx.Logging;
-using BepInEx.Configuration;
 using Deltin.Math;
 using static Deltin.Constants;
 
@@ -30,15 +27,13 @@ namespace Deltin
 
 
         /// <summary>Initializes the config data.</summary>
-        public static void Configure(ManualLogSource logger, ConfigFile config)
+        public static void Configure()
         {
-            MonsterTooth = new InteractableEventSourceConfig(logger, config, "Pick_Up_Monster_Tooth", "Monster Tooth", MonsterToothDefaults);
-            Bandolier = new InteractableEventSourceConfig(logger, config, "Pick_Up_Bandolier", "Bandolier", BandolierDefaults);
-            GhorsTome = new InteractableEventSourceConfig(logger, config, "Pick_Up_Ghors_Tome", "Ghors Tome", GhorsTomeDefaults);
+            MonsterTooth = new InteractableEventSourceConfig("Pick_Up_Monster_Tooth", "Monster Tooth", MonsterToothDefaults);
+            Bandolier = new InteractableEventSourceConfig("Pick_Up_Bandolier", "Bandolier", BandolierDefaults);
+            GhorsTome = new InteractableEventSourceConfig("Pick_Up_Ghors_Tome", "Ghors Tome", GhorsTomeDefaults);
 
             InteractFireworkCount = new EvaluatableConfigEntry(
-                logger,
-                config,
                 sectionName: "VanillaRebalance",
                 name: "InteractFireworkLaunchCount",
                 description: @"The number of fireworks that are fired when interacting. Since the buff may make fireworks a bit overtuned,
@@ -59,18 +54,18 @@ namespace Deltin
         readonly EvaluatableConfigEntry _squidAttackSpeed;
         readonly EvaluatableConfigEntry _squidHealth;
 
-        public InteractableEventSourceConfig(ManualLogSource logger, ConfigFile config, string sectionName, string sourceItem, DropletFormulaDefaults defaultValue)
+        public InteractableEventSourceConfig(string sectionName, string sourceItem, DropletFormulaDefaults defaultValue)
         {
             SectionName = sectionName;
             
-            _fireworkCount = Bind(logger, config, "FireworkLaunchCount", MakeDescription("The number of fireworks spawned", sourceItem, FireworkItemName), defaultValue.FireworkCount);
-            _fireworkDamageCoefficent = Bind(logger, config, "FireworkDamageCoefficent", MakeDescription("The damage coefficent of the spawned fireworks", sourceItem, FireworkItemName, "The vanilla default is 3"), defaultValue.FireworkDamageCoefficent);
-            _squidAttackSpeed = Bind(logger, config, "SquidAttackSpeed", MakeDescription("The Squid Polyp attack speed", sourceItem, SquidItemName), defaultValue.SquidAttackSpeed);
-            _squidHealth = Bind(logger, config, "SquidHealth", MakeDescription("The health of the Squid Polyp", sourceItem, SquidItemName), defaultValue.SquidHealth);
+            _fireworkCount = Bind("FireworkLaunchCount", MakeDescription("The number of fireworks spawned", sourceItem, FireworkItemName), defaultValue.FireworkCount);
+            _fireworkDamageCoefficent = Bind("FireworkDamageCoefficent", MakeDescription("The damage coefficent of the spawned fireworks", sourceItem, FireworkItemName, "The vanilla default is 3"), defaultValue.FireworkDamageCoefficent);
+            _squidAttackSpeed = Bind("SquidAttackSpeed", MakeDescription("The Squid Polyp attack speed", sourceItem, SquidItemName), defaultValue.SquidAttackSpeed);
+            _squidHealth = Bind("SquidHealth", MakeDescription("The health of the Squid Polyp", sourceItem, SquidItemName), defaultValue.SquidHealth);
         }
 
-        EvaluatableConfigEntry Bind(ManualLogSource logger, ConfigFile config, string name, string description, string formula) =>
-            new EvaluatableConfigEntry(logger, config, SectionName, name, description, formula, parameters: "n");
+        EvaluatableConfigEntry Bind(string name, string description, string formula) =>
+            new EvaluatableConfigEntry(SectionName, name, description, formula, parameters: "n");
 
         string MakeDescription(string description, string sourceItem, string activeItem, string postDescription = null) =>
             description + " when picking up a " + sourceItem + ". " + (postDescription == null ? "" : postDescription + ". ") + StackParameterText(activeItem);
@@ -108,21 +103,17 @@ namespace Deltin
 
         readonly Expression _defaultExpression; // The default expression when the user has a bad input.
         readonly string[] _parameters; // The parameters in the formula.
-        readonly ManualLogSource _logger; // Log bad settings.
         readonly string _sectionName;
         readonly string _name;
-        readonly ConfigFile _config;
 
-        public EvaluatableConfigEntry(ManualLogSource logger, ConfigFile config, string sectionName, string name, string description, string defaultFormula, params string[] parameters)
+        public EvaluatableConfigEntry(string sectionName, string name, string description, string defaultFormula, params string[] parameters)
         {
             _defaultExpression = Expression.FromString(defaultFormula, parameters);
             _parameters = parameters;
-            _logger = logger;
             _sectionName = sectionName;
             _name = name;
-            _config = config;
 
-            var entry = config.Bind(sectionName, name, defaultFormula, description);
+            var entry = Droplets_Activate_Interact_Items.Configuration.Bind(sectionName, name, defaultFormula, description);
 
             // Set initial value
             Set(entry.Value);
@@ -139,15 +130,15 @@ namespace Deltin
             }
             catch (Math.Parse.SyntaxErrorException error)
             {
-                _logger.LogError(Title() + ": Failed to parse '" + expression + "': " + error.Message);
+                Droplets_Activate_Interact_Items.Log.LogError(Title() + ": Failed to parse '" + expression + "': " + error.Message);
                 Expression = _defaultExpression;
             }
             catch (Exception ex)
             {
-                _logger.LogError(Title() + ": Failed to parse '" + expression + "': " + ex);
+                Droplets_Activate_Interact_Items.Log.LogError(Title() + ": Failed to parse '" + expression + "': " + ex);
                 Expression = _defaultExpression;
             }
-            _logger.LogInfo(DebugName());
+            Droplets_Activate_Interact_Items.Log.LogInfo(DebugName());
         }
 
         /// <summary>Gets the formula's value</summary>
@@ -166,12 +157,7 @@ namespace Deltin
             for (int i = 0; i < values.Length; i++)
                 inputParameters.Add(_parameters[i], values[i]);
 
-            var evaluateInfo = new EvaluateInfo(inputParameters);
-
-            // Reload the config.
-            _config.Reload();
-
-            return Expression.Evaluate(evaluateInfo);
+            return Expression.Evaluate(new EvaluateInfo(inputParameters));
         }
 
         string Title() => _sectionName + "/" + _name;
