@@ -4,6 +4,7 @@ using RoR2;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace Deltin
 {
@@ -88,8 +89,9 @@ namespace Deltin
 
         void ExecuteDroplet(CharacterBody body, InteractableEventSourceConfig balance)
         {
+            if (!body.inventory || !body.master || !NetworkServer.active) return;
+
             var inventory = body.inventory;
-            if (!inventory) return;
 
             // Fireworks
             int fireworkCount = inventory.GetItemCount(RoR2Content.Items.Firework);
