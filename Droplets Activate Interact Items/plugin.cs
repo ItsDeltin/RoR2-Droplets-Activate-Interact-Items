@@ -32,7 +32,7 @@ namespace Deltin
                 );
 
                 c.Emit(OpCodes.Ldloc_0); // Emit local variable that contains the character body.
-                c.EmitDelegate<Action<CharacterBody>>(characterBody => ExecuteDroplet(characterBody, DropletConfig.MonsterTooth));
+                c.EmitDelegate<Action<CharacterBody>>(characterBody => ExecuteDropletChance(characterBody, DropletConfig.MonsterTooth, RoR2Content.Items.Tooth));
             };
 
             // Money
@@ -132,6 +132,16 @@ namespace Deltin
                 };
                 DirectorCore.instance.TrySpawnObject(directorSpawnRequest);
             }
+        }
+
+        void ExecuteDropletChance(CharacterBody body, InteractableEventSourceConfig balance, ItemDef item)
+        {
+            if (!body.inventory || !body.master) return;
+
+            float chance = balance.GetActivationChance(body.inventory.GetItemCount(item));
+            
+            if (RoR2.Util.CheckRoll(chance, body.master))
+                ExecuteDroplet(body, balance);
         }
 
         // Debugging
