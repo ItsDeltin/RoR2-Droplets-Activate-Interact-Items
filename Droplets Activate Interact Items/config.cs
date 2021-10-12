@@ -21,9 +21,9 @@ namespace Deltin
 
 
         // The mod default balancing.
-        static DropletFormulaDefaults MonsterToothDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n", FireworkDamageCoefficent = "2", SquidActivationChance = "0", SquidAttackSpeed = "n * 5", SquidHealth = "20", FireworkActivationChance = "100", DefiantGougeActivationChance = "0", DefiantGougeMonsterCredit = "n * 20" };
-        static DropletFormulaDefaults BandolierDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 3", FireworkDamageCoefficent = "2", SquidActivationChance = "0", SquidAttackSpeed = "n * 10", SquidHealth = "40", FireworkActivationChance = "100", DefiantGougeActivationChance = "0", DefiantGougeMonsterCredit = "n * 20" };
-        static DropletFormulaDefaults GhorsTomeDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 4", FireworkDamageCoefficent = "2", SquidActivationChance = "0", SquidAttackSpeed = "n * 15", SquidHealth = "60", FireworkActivationChance = "100", DefiantGougeActivationChance = "0", DefiantGougeMonsterCredit = "n * 20" };
+        static DropletFormulaDefaults MonsterToothDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n", FireworkDamageCoefficent = "2", SquidActivationChance = "20 + (n - 1) * 10", SquidAttackSpeed = "n * 5", SquidHealth = "20", FireworkActivationChance = "100", DefiantGougeActivationChance = "5", DefiantGougeMonsterCredit = "n * 20" };
+        static DropletFormulaDefaults BandolierDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 3", FireworkDamageCoefficent = "2", SquidActivationChance = "100", SquidAttackSpeed = "n * 10", SquidHealth = "40", FireworkActivationChance = "100", DefiantGougeActivationChance = "30", DefiantGougeMonsterCredit = "n * 20" };
+        static DropletFormulaDefaults GhorsTomeDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 4", FireworkDamageCoefficent = "2", SquidActivationChance = "100", SquidAttackSpeed = "n * 15", SquidHealth = "60", FireworkActivationChance = "100", DefiantGougeActivationChance = "50", DefiantGougeMonsterCredit = "n * 20" };
 
 
         /// <summary>Initializes the config data.</summary>
