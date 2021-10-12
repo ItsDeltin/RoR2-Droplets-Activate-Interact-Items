@@ -33,7 +33,7 @@ namespace Deltin
                 );
 
                 c.Emit(OpCodes.Ldloc_0); // Emit local variable that contains the character body.
-                c.EmitDelegate<Action<CharacterBody>>(characterBody => ExecuteDropletChance(characterBody, DropletConfig.MonsterTooth, RoR2Content.Items.Tooth));
+                c.EmitDelegate<Action<CharacterBody>>(characterBody => ExecuteDroplet(characterBody, DropletConfig.MonsterTooth));
             };
 
             // Money
@@ -95,7 +95,7 @@ namespace Deltin
 
             // Fireworks
             int fireworkCount = inventory.GetItemCount(RoR2Content.Items.Firework);
-            if (fireworkCount > 0)
+            if (fireworkCount > 0 && Util.CheckRoll(balance.GetFireworkActivationChance(fireworkCount), body.master))
             {
                 // Create the FireworkLauncher.
                 FireworkLauncher launcher = UnityEngine.Object.Instantiate<GameObject>(
@@ -111,7 +111,7 @@ namespace Deltin
 
             // Squid
             int squidCount = inventory.GetItemCount(RoR2Content.Items.Squid);
-            if (squidCount > 0)
+            if (squidCount > 0 && Util.CheckRoll(balance.GetSquidActivationChance(squidCount), body.master))
             {
                 SpawnCard spawnCard = Resources.Load<CharacterSpawnCard>("SpawnCards/CharacterSpawnCards/cscSquidTurret");
                 DirectorPlacementRule placementRule = new DirectorPlacementRule
@@ -134,16 +134,40 @@ namespace Deltin
                 };
                 DirectorCore.instance.TrySpawnObject(directorSpawnRequest);
             }
-        }
 
-        void ExecuteDropletChance(CharacterBody body, InteractableEventSourceConfig balance, ItemDef item)
+            // Defiant gouge
+            int lunarCount = inventory.GetItemCount(RoR2Content.Items.MonstersOnShrineUse);
+            if (lunarCount > 0 && Util.CheckRoll(balance.GetDefiantGougeActivationChance(lunarCount), body.master))
         {
-            if (!body.inventory || !body.master) return;
+                GameObject monstersOnShrineUseEncounter = UnityEngine.Object.Instantiate(
+                    Resources.Load<GameObject>("Prefabs/NetworkedObjects/Encounters/MonstersOnShrineUseEncounter"),
+                    body.corePosition,
+                    Quaternion.identity);
+                
+                NetworkServer.Spawn(monstersOnShrineUseEncounter);
+                CombatDirector director = monstersOnShrineUseEncounter.GetComponent<CombatDirector>();
+                float monsterCredit = Stage.instance.entryDifficultyCoefficient * balance.GetDefiantGougeMonsterCredit(lunarCount);
+                DirectorCard directorCard = director.SelectMonsterCardForCombatShrine(monsterCredit);
+                if (directorCard != null)
+                {
+                    CombatShrineActivation(director, monsterCredit, directorCard);
 
-            float chance = balance.GetActivationChance(body.inventory.GetItemCount(item));
+                    EffectData effectData = new EffectData { origin = body.corePosition, rotation = Quaternion.identity };
+                    EffectManager.SpawnEffect(Resources.Load<GameObject>("Prefabs/Effects/MonstersOnShrineUse"), effectData, true);
+                    return;
+                }
+                NetworkServer.Destroy(monstersOnShrineUseEncounter);
+            }
+        }
             
-            if (RoR2.Util.CheckRoll(chance, body.master))
-                ExecuteDroplet(body, balance);
+        // Ported from RoR2.CombatDirector.CombatShrineActivation(Interactor interactor, float monsterCredit, DirectorCard chosenDirectorCard)
+        // Without the chat message
+        void CombatShrineActivation(CombatDirector director, float monsterCredit, DirectorCard chosenDirectorCard)
+		{
+			director.enabled = true;
+			director.monsterCredit += monsterCredit;
+			director.OverrideCurrentMonsterCard(chosenDirectorCard);
+			director.monsterSpawnTimer = 0f;
         }
 
         // Debugging
@@ -156,6 +180,7 @@ namespace Deltin
                 (KeyCode.F2, RoR2Content.Items.BonusGoldPackOnKill),
                 (KeyCode.F4, RoR2Content.Items.Firework),
                 (KeyCode.F5, RoR2Content.Items.Squid),
+                (KeyCode.F6, RoR2Content.Items.MonstersOnShrineUse),
             };
 
             foreach (var itemHotkey in itemHotkeys)

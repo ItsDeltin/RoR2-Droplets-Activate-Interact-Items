@@ -21,9 +21,9 @@ namespace Deltin
 
 
         // The mod default balancing.
-        static DropletFormulaDefaults MonsterToothDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n", FireworkDamageCoefficent = "2", SquidAttackSpeed = "n * 5", SquidHealth = "20", ActivationChance = "100" };
-        static DropletFormulaDefaults BandolierDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 3", FireworkDamageCoefficent = "2", SquidAttackSpeed = "n * 10", SquidHealth = "40", ActivationChance = "100" };
-        static DropletFormulaDefaults GhorsTomeDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 4", FireworkDamageCoefficent = "2", SquidAttackSpeed = "n * 15", SquidHealth = "60", ActivationChance = "100" };
+        static DropletFormulaDefaults MonsterToothDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n", FireworkDamageCoefficent = "2", SquidActivationChance = "0", SquidAttackSpeed = "n * 5", SquidHealth = "20", FireworkActivationChance = "100", DefiantGougeActivationChance = "0", DefiantGougeMonsterCredit = "n * 20" };
+        static DropletFormulaDefaults BandolierDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 3", FireworkDamageCoefficent = "2", SquidActivationChance = "0", SquidAttackSpeed = "n * 10", SquidHealth = "40", FireworkActivationChance = "100", DefiantGougeActivationChance = "0", DefiantGougeMonsterCredit = "n * 20" };
+        static DropletFormulaDefaults GhorsTomeDefaults = new DropletFormulaDefaults { FireworkCount = "1 + n * 4", FireworkDamageCoefficent = "2", SquidActivationChance = "0", SquidAttackSpeed = "n * 15", SquidHealth = "60", FireworkActivationChance = "100", DefiantGougeActivationChance = "0", DefiantGougeMonsterCredit = "n * 20" };
 
 
         /// <summary>Initializes the config data.</summary>
@@ -51,24 +51,32 @@ namespace Deltin
 
         protected string SourceItem { get; private set; }
 
+        readonly EvaluatableConfigEntry _fireworkActivationChance;
         readonly EvaluatableConfigEntry _fireworkCount;
         readonly EvaluatableConfigEntry _fireworkDamageCoefficent;
+
+        readonly EvaluatableConfigEntry _squidActivationChance;
         readonly EvaluatableConfigEntry _squidAttackSpeed;
         readonly EvaluatableConfigEntry _squidHealth;
-        readonly EvaluatableConfigEntry _activationChance;
+
+        readonly EvaluatableConfigEntry _defiantGougeActivationChance;
+        readonly EvaluatableConfigEntry _defiantGougeMonsterCredit;
 
         public InteractableEventSourceConfig(string sectionName, string sourceItem, DropletFormulaDefaults defaultValue, bool supportsActivationChance)
         {
             SectionName = sectionName;
             SourceItem = sourceItem;
             
-            _fireworkCount = Bind("Firework Launch Count", MakeDescription("The number of fireworks spawned", FireworkItemName), defaultValue.FireworkCount);
+            _fireworkActivationChance = Bind("Fireworks - Activation Chance", MakeDescription("The chance to activate fireworks", SourceItem), defaultValue.FireworkActivationChance);
+            _fireworkCount = Bind("Fireworks - Launch Count", MakeDescription("The number of fireworks spawned", FireworkItemName), defaultValue.FireworkCount);
             _fireworkDamageCoefficent = Bind("Firework Damage Coefficent", MakeDescription("The damage coefficent of the spawned fireworks", FireworkItemName, "The vanilla default is 3"), defaultValue.FireworkDamageCoefficent);
-            _squidAttackSpeed = Bind("Squid Attack Speed", MakeDescription("The Squid Polyp attack speed", SquidItemName), defaultValue.SquidAttackSpeed);
-            _squidHealth = Bind("Squid Health", MakeDescription("The health of the Squid Polyp", SquidItemName), defaultValue.SquidHealth);
-
-            if (supportsActivationChance)
-                _activationChance = Bind("Firework Activation Chance", MakeDescription("The chance to activate the interact items", SourceItem), defaultValue.ActivationChance);
+            
+            _squidActivationChance = Bind("Squid Polyp - Activation Chance", MakeDescription("The chance to spawn squids", SourceItem), defaultValue.SquidActivationChance);
+            _squidAttackSpeed = Bind("Squid Polyp - Attack Speed", MakeDescription("The Squid Polyp attack speed", SquidItemName), defaultValue.SquidAttackSpeed);
+            _squidHealth = Bind("Squid Polyp - Health", MakeDescription("The health of the Squid Polyp", SquidItemName), defaultValue.SquidHealth);
+            
+            _defiantGougeActivationChance = Bind("Defiant Gouge - Activation Chance", MakeDescription("The chance monsters will spawn", SourceItem), defaultValue.DefiantGougeActivationChance);
+            _defiantGougeMonsterCredit = Bind("Defiant Gouge - Monster Credit", MakeDescription("The spawn credits used to spawn enemies", DefiantGougeName), defaultValue.DefiantGougeMonsterCredit);
         }
 
         EvaluatableConfigEntry Bind(string name, string description, string formula) =>
@@ -78,11 +86,17 @@ namespace Deltin
             description + " when picking up a " + SourceItem + ". " + (postDescription == null ? "" : postDescription + ". ") + StackParameterText(activeItem);
 
 
+        ///<summary>Gets the chance to spawn fireworks</summary>
+        public float GetFireworkActivationChance(int stackCount) => _fireworkActivationChance.Evaluate(stackCount);
+
         /// <summary>Gets the number of fireworks to be fired</summary>
         public int GetFireworkCount(int stackCount) => (int)_fireworkCount.Evaluate(stackCount);
 
         /// <summary>Gets the damage coefficient of fireworks</summary>
         public float GetFireworkDamageCoefficient(int stackCount) => _fireworkDamageCoefficent.Evaluate(stackCount);
+
+        /// <summary>Gets the chance to spawn squids</summary>
+        public float GetSquidActivationChance(int stackCount) => (int)_squidActivationChance.Evaluate(stackCount);
 
         /// <summary>Gets the attack speed of a squid polyp</summary>
         public int GetSquidAttackSpeed(int stackCount) => (int)_squidAttackSpeed.Evaluate(stackCount);
@@ -90,19 +104,27 @@ namespace Deltin
         /// <summary>Gets the health of a squid polyp</summary>
         public int GetSquidHealth(int stackCount) => (int)_squidHealth.Evaluate(stackCount);
 
-        ///<summary>Gets the chance to activate the interact items</summary>
-        public float GetActivationChance(int stackCount) => _activationChance.Evaluate(stackCount);
+        /// <summary>Gets the chance to spawn monsters</summary>
+        public float GetDefiantGougeActivationChance(int stackCount) => _defiantGougeActivationChance.Evaluate(stackCount);
+
+        /// <summary>Gets the monster credit</summary>
+        public float GetDefiantGougeMonsterCredit(int stackCount) => _defiantGougeMonsterCredit.Evaluate(stackCount);
     }
 
 
     /// <summary>The default balance for a droplet</summary>
     struct DropletFormulaDefaults
     {
+        public string FireworkActivationChance; // The chance to spawn fireworks.
         public string FireworkCount; // The number of fireworks fired.
         public string FireworkDamageCoefficent; // The damage of the fireworks.
+
+        public string SquidActivationChance; // The chance to spawn a squid.
         public string SquidAttackSpeed; // The attack speed of the squids.
         public string SquidHealth; // The health of the squids.
-        public string ActivationChance; // The chance to activate interact items.
+
+        public string DefiantGougeActivationChance; // The chance to spawn monsters.
+        public string DefiantGougeMonsterCredit; // The amount of monster credits that can be used to spawn enemies.
     }
 
 
