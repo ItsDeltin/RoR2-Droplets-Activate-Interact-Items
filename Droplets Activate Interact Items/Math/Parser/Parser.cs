@@ -23,18 +23,22 @@ namespace Deltin.Math.Parse
             _tokens = tokenizer.GetTokens();
             _input = tokenizer.Input;
             _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
-            _operators.Push(Operator.Operators[0]);
         }
 
 
         public Expression GetExpression()
         {
+            _operators.Push(Operator.Operators[0]);
+
             do _operands.Push(NextNode());
             while (GetOperator());
 
             // Pop all operators
             while (_operators.Peek().Precedence != 0)
                 PopOperator();
+            
+            // Pop sentiel
+            _operators.Pop();
 
             return _operands.Pop();
         }
